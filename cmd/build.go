@@ -1,5 +1,5 @@
 /*
-Copyright © 2023 NAME HERE tk3fftk
+Copyright © 2023 tk3fftk
 */
 package cmd
 
