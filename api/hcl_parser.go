@@ -72,22 +72,22 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	baseBlocks := base.Blocks()
 	overlayBlocks := overlay.Blocks()
 
-	baseProviderBlocks := map[string]*hclwrite.Block{}
-	baseResourceBlocks := map[string]*hclwrite.Block{}
-	baseDataBlocks := map[string]*hclwrite.Block{}
+	tmpBlocks := map[string]map[string]*hclwrite.Block{}
 
 	baseLocals := map[string]*hclwrite.Attribute{}
 	overlayLocals := map[string]*hclwrite.Attribute{}
 
 	for _, baseBlock := range baseBlocks {
+		// TF的にはラベルは2つまでの利用に見えるが、HCLの仕様上はlabelを3つ以上設定できるので念のためラベルを結合した文字列をキーにしておく
 		joinedLabel := strings.Join(baseBlock.Labels(), "_")
-		switch baseBlock.Type() {
-		case "provider":
-			baseProviderBlocks[joinedLabel] = baseBlock
-		case "resource":
-			baseResourceBlocks[joinedLabel] = baseBlock
-		case "data":
-			baseDataBlocks[joinedLabel] = baseBlock
+		blockType := baseBlock.Type()
+		switch blockType {
+		case "provider", "resource", "data", "module", "terraform":
+			if tmpBlocks[blockType] == nil {
+				tmpBlocks[blockType] = map[string]*hclwrite.Block{}
+			}
+
+			tmpBlocks[blockType][joinedLabel] = baseBlock
 		case "locals":
 			for name, attribute := range baseBlock.Body().Attributes() {
 				baseLocals[name] = attribute
@@ -98,37 +98,18 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		base.RemoveBlock(baseBlock)
 	}
 
-	// baseにあるblockをoverlayで上書きして一時保管、なければbodyに直接追加
+	// baseにあるblockをoverlayで上書きして一時保管、baseになければoverlayの値をbodyに直接追加
 	for _, overlayBlock := range overlayBlocks {
 		joinedLabel := strings.Join(overlayBlock.Labels(), "_")
-		switch overlayBlock.Type() {
-		case "provider":
-			if baseProviderBlock, ok := baseProviderBlocks[joinedLabel]; ok {
-				mergedBlock, err := mergeBlock(baseProviderBlock, overlayBlock)
+		blockType := overlayBlock.Type()
+		switch blockType {
+		case "provider", "resource", "data", "module", "terraform":
+			if tmpBlock, ok := tmpBlocks[blockType][joinedLabel]; ok {
+				mergedBlock, err := mergeBlock(tmpBlock, overlayBlock)
 				if err != nil {
 					return nil, err
 				}
-				baseProviderBlocks[joinedLabel] = mergedBlock
-			} else {
-				base.AppendBlock(overlayBlock)
-			}
-		case "resource":
-			if baseResourceBlock, ok := baseResourceBlocks[joinedLabel]; ok {
-				mergedBlock, err := mergeBlock(baseResourceBlock, overlayBlock)
-				if err != nil {
-					return nil, err
-				}
-				baseResourceBlocks[joinedLabel] = mergedBlock
-			} else {
-				base.AppendBlock(overlayBlock)
-			}
-		case "data":
-			if baseDataBlock, ok := baseDataBlocks[joinedLabel]; ok {
-				mergedBlock, err := mergeBlock(baseDataBlock, overlayBlock)
-				if err != nil {
-					return nil, err
-				}
-				baseDataBlocks[joinedLabel] = mergedBlock
+				tmpBlocks[blockType][joinedLabel] = mergedBlock
 			} else {
 				base.AppendBlock(overlayBlock)
 			}
@@ -151,16 +132,10 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	base.AppendBlock(resultedLocalBlock)
 	base.AppendNewline()
 
-	for _, baseProviderBlock := range baseProviderBlocks {
-		base.AppendBlock(baseProviderBlock)
-		base.AppendNewline()
-	}
-	for _, baseResourceBlock := range baseResourceBlocks {
-		base.AppendBlock(baseResourceBlock)
-		base.AppendNewline()
-	}
-	for _, baseDataBlock := range baseDataBlocks {
-		base.AppendBlock(baseDataBlock)
+	for _, tmpBlock := range tmpBlocks {
+		for _, block := range tmpBlock {
+			base.AppendBlock(block)
+		}
 		base.AppendNewline()
 	}
 

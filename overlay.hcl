@@ -7,6 +7,13 @@ type = {
 CI=true
 threads = 1
 
+locals {
+  a = 1
+  b = 2
+  c = 4
+  d = 100
+}
+
 resource "aws_instance" "web" {
   instance_type = "t3.medium"
   availability_zone = "ap-northeast-1a"
@@ -30,7 +37,6 @@ resource "aws_instance" "be" {
   }
   availability_zone = "ap-northeast-1a"
 }
-
 
 terraform {
   required_providers {
