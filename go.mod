@@ -1,6 +1,6 @@
 module github.com/tk3fftk/tfustomize
 
-go 1.21.4
+go 1.21.5
 
 require (
 	github.com/hashicorp/hcl/v2 v2.19.1

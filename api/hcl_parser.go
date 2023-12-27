@@ -72,14 +72,18 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	baseBlocks := base.Blocks()
 	overlayBlocks := overlay.Blocks()
 
+	baseProviderBlocks := map[string]*hclwrite.Block{}
 	baseResourceBlocks := map[string]*hclwrite.Block{}
 	baseDataBlocks := map[string]*hclwrite.Block{}
+
 	baseLocals := map[string]*hclwrite.Attribute{}
 	overlayLocals := map[string]*hclwrite.Attribute{}
 
 	for _, baseBlock := range baseBlocks {
 		joinedLabel := strings.Join(baseBlock.Labels(), "_")
 		switch baseBlock.Type() {
+		case "provider":
+			baseProviderBlocks[joinedLabel] = baseBlock
 		case "resource":
 			baseResourceBlocks[joinedLabel] = baseBlock
 		case "data":
@@ -98,6 +102,16 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	for _, overlayBlock := range overlayBlocks {
 		joinedLabel := strings.Join(overlayBlock.Labels(), "_")
 		switch overlayBlock.Type() {
+		case "provider":
+			if baseProviderBlock, ok := baseProviderBlocks[joinedLabel]; ok {
+				mergedBlock, err := mergeBlock(baseProviderBlock, overlayBlock)
+				if err != nil {
+					return nil, err
+				}
+				baseProviderBlocks[joinedLabel] = mergedBlock
+			} else {
+				base.AppendBlock(overlayBlock)
+			}
 		case "resource":
 			if baseResourceBlock, ok := baseResourceBlocks[joinedLabel]; ok {
 				mergedBlock, err := mergeBlock(baseResourceBlock, overlayBlock)
@@ -137,6 +151,10 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	base.AppendBlock(resultedLocalBlock)
 	base.AppendNewline()
 
+	for _, baseProviderBlock := range baseProviderBlocks {
+		base.AppendBlock(baseProviderBlock)
+		base.AppendNewline()
+	}
 	for _, baseResourceBlock := range baseResourceBlocks {
 		base.AppendBlock(baseResourceBlock)
 		base.AppendNewline()
