@@ -4,12 +4,12 @@ tfustomize {
 
 resources {
   pathes = [
-    "./base.hcl",
+    "./base.tf",
   ]
 }
 
 patches {
   pathes = [
-    "./overlay.hcl",
+    "./overlay.tf",
   ]
 }

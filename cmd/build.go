@@ -19,23 +19,24 @@ var buildCmd = &cobra.Command{
 	Long:  `Build a kustomization target from a directory.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		basedir := filepath.Base("")
+		baseConfDir := filepath.Base("")
 		if len(args) == 1 {
-			basedir = filepath.Join(basedir, args[0])
+			baseConfDir = filepath.Join(baseConfDir, args[0])
 		}
 
-		// to test
-		conf, _ := api.LoadConfig(filepath.Join(basedir, "tfustomization.hcl"))
+		conf, _ := api.LoadConfig(filepath.Join(baseConfDir, "tfustomization.hcl"))
+		baseDir := conf.Resources.Pathes[0]
+		overlayDir := conf.Patches.Pathes[0]
 
 		fmt.Printf("%+v\n", conf)
 
 		parser := api.NewHCLParser()
 
-		base, err := parser.ReadHCLFile("base.hcl")
+		base, err := parser.ReadHCLFile(baseDir)
 		if err != nil {
 			panic(err)
 		}
-		overlay, err := parser.ReadHCLFile("overlay.hcl")
+		overlay, err := parser.ReadHCLFile(overlayDir)
 		if err != nil {
 			panic(err)
 		}

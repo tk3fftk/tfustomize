@@ -1,12 +1,3 @@
-log_level = "warn"
-type = {
-  "a" = 1
-  "b" = 2
-  "c" = 3
-}
-CI=true
-threads = 1
-
 locals {
   a = 1
   b = 2
@@ -15,7 +6,7 @@ locals {
 }
 
 resource "aws_instance" "web" {
-  instance_type = "t3.medium"
+  instance_type     = "t3.medium"
   availability_zone = "ap-northeast-1a"
 }
 

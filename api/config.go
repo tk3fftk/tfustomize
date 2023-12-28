@@ -6,8 +6,8 @@ import (
 
 type TfustomizeConfig struct {
 	Tfustomize Tfustomize `hcl:"tfustomize,block"`
-	Resources  []Resource `hcl:"resources,block"`
-	Patches    []Patch    `hcl:"patches,block"`
+	Resources  Resource   `hcl:"resources,block"`
+	Patches    Patch      `hcl:"patches,block"`
 }
 
 type Tfustomize struct {
