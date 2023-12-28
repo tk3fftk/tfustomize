@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/spf13/cobra"
@@ -14,34 +15,41 @@ import (
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Build a kustomization target from a directory.",
+	Long:  `Build a kustomization target from a directory.`,
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		baseConfDir := filepath.Base("")
+		if len(args) == 1 {
+			baseConfDir = filepath.Join(baseConfDir, args[0])
+		}
+
+		conf, _ := api.LoadConfig(filepath.Join(baseConfDir, "tfustomization.hcl"))
+		baseDir := conf.Resources.Pathes[0]
+		overlayDir := conf.Patches.Pathes[0]
+
+		fmt.Printf("%+v\n", conf)
+
 		parser := api.NewHCLParser()
 
-		base, err := parser.ReadHCLFile("base.hcl")
+		base, err := parser.ReadHCLFile(baseDir)
 		if err != nil {
 			panic(err)
 		}
-		overlay, err := parser.ReadHCLFile("overlay.hcl")
+		overlay, err := parser.ReadHCLFile(overlayDir)
 		if err != nil {
 			panic(err)
 		}
-		output, err := parser.PatchFileAttributes(base, overlay)
+		_, err = parser.PatchFileAttributes(base, overlay)
 		if err != nil {
 			panic(err)
 		}
-		output, err = parser.MergeFileBlocks(base, overlay)
+		_, err = parser.MergeFileBlocks(base, overlay)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Printf("%s", hclwrite.Format(output.Bytes()))
+		fmt.Printf("%s", hclwrite.Format(base.Bytes()))
 	},
 }
 

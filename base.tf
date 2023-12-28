@@ -1,9 +1,3 @@
-log_level = "info"
-type = {
-  "a" = 1
-  "b" = 2
-}
-
 locals {
   a = 1
   b = 2
