@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -37,6 +38,22 @@ func (p HCLParser) PatchFileAttributes(base *hclwrite.File, overlay *hclwrite.Fi
 	patchBodyAttributes(base.Body(), overlay.Body())
 	base.Body().AppendNewline()
 	return base, nil
+}
+
+func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, error) {
+	outputFile := hclwrite.NewEmptyFile()
+
+	for _, path := range pathes {
+		file, err := p.ReadHCLFile(filepath.Join(baseDir, path))
+		if err != nil {
+			return nil, err
+		}
+		for _, block := range file.Body().Blocks() {
+			outputFile.Body().AppendBlock(block)
+		}
+	}
+
+	return outputFile, nil
 }
 
 func patchBodyAttributes(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, error) {
@@ -112,6 +129,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 				tmpBlocks[blockType][joinedLabel] = mergedBlock
 			} else {
 				base.AppendBlock(overlayBlock)
+				base.AppendNewline()
 			}
 		case "locals":
 			for name, attribute := range overlayBlock.Body().Attributes() {
