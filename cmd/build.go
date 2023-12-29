@@ -16,8 +16,8 @@ import (
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "Build a kustomization target from a directory.",
-	Long:  `Build a kustomization target from a directory.`,
+	Short: "Build a tfustomization target from a directory.",
+	Long:  `Build a tfustomization target from a directory.`,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		baseConfDir := filepath.Base("")
@@ -32,35 +32,33 @@ var buildCmd = &cobra.Command{
 
 		conf, _ := api.LoadConfig(tfustomizationPath)
 		if len(conf.Resources.Pathes) == 0 {
-			err := fmt.Errorf("tfustomization.hcl must have resources")
+			err := fmt.Errorf("tfustomization.hcl must have a resources block")
 			return err
 		}
-
-		baseDir := conf.Resources.Pathes[0]
-		overlayDir := conf.Patches.Pathes[0]
 
 		fmt.Printf("%+v\n", conf)
 
 		parser := api.NewHCLParser()
 
-		base, err := parser.ReadHCLFile(baseDir)
+		baseHCLFile, err := parser.ConcatFile(filepath.Dir(tfustomizationPath), conf.Resources.Pathes)
 		if err != nil {
 			return err
 		}
-		overlay, err := parser.ReadHCLFile(overlayDir)
-		if err != nil {
-			return err
-		}
-		_, err = parser.PatchFileAttributes(base, overlay)
-		if err != nil {
-			return err
-		}
-		_, err = parser.MergeFileBlocks(base, overlay)
+		overlayHCLFile, err := parser.ConcatFile(filepath.Dir(tfustomizationPath), conf.Patches.Pathes)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("%s", hclwrite.Format(base.Bytes()))
+		_, err = parser.PatchFileAttributes(baseHCLFile, overlayHCLFile)
+		if err != nil {
+			return err
+		}
+		_, err = parser.MergeFileBlocks(baseHCLFile, overlayHCLFile)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%s", hclwrite.Format(baseHCLFile.Bytes()))
 
 		return nil
 	},
