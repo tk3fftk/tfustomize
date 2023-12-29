@@ -29,19 +29,6 @@ resource "aws_instance" "be" {
   availability_zone = "ap-northeast-1a"
 }
 
-terraform {
-  required_providers {
-    aws = {
-      version = "~> 6.0"
-    }
-  }
-}
-
-# Configure the AWS Provider
-provider "aws" {
-  region = "ap-northeast-1"
-}
-
 module "servers" {
   servers = 1
 }
