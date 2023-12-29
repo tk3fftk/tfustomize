@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -18,13 +19,23 @@ var buildCmd = &cobra.Command{
 	Short: "Build a kustomization target from a directory.",
 	Long:  `Build a kustomization target from a directory.`,
 	Args:  cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		baseConfDir := filepath.Base("")
 		if len(args) == 1 {
 			baseConfDir = filepath.Join(baseConfDir, args[0])
 		}
+		tfustomizationPath := filepath.Join(baseConfDir, "tfustomization.hcl")
 
-		conf, _ := api.LoadConfig(filepath.Join(baseConfDir, "tfustomization.hcl"))
+		if _, err := os.Stat(tfustomizationPath); err != nil {
+			return err
+		}
+
+		conf, _ := api.LoadConfig(tfustomizationPath)
+		if len(conf.Resources.Pathes) == 0 {
+			err := fmt.Errorf("tfustomization.hcl must have resources")
+			return err
+		}
+
 		baseDir := conf.Resources.Pathes[0]
 		overlayDir := conf.Patches.Pathes[0]
 
@@ -34,22 +45,24 @@ var buildCmd = &cobra.Command{
 
 		base, err := parser.ReadHCLFile(baseDir)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		overlay, err := parser.ReadHCLFile(overlayDir)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		_, err = parser.PatchFileAttributes(base, overlay)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		_, err = parser.MergeFileBlocks(base, overlay)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		fmt.Printf("%s", hclwrite.Format(base.Bytes()))
+
+		return nil
 	},
 }
 
