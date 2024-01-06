@@ -34,12 +34,6 @@ func (p HCLParser) ReadHCLFile(filename string) (*hclwrite.File, error) {
 	return file, nil
 }
 
-func (p HCLParser) PatchFileAttributes(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
-	patchBodyAttributes(base.Body(), overlay.Body())
-	base.Body().AppendNewline()
-	return base, nil
-}
-
 func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, error) {
 	outputFile := hclwrite.NewEmptyFile()
 
@@ -54,6 +48,11 @@ func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, 
 	}
 
 	return outputFile, nil
+}
+
+func (p HCLParser) PatchFileAttributes(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
+	patchBodyAttributes(base.Body(), overlay.Body())
+	return base, nil
 }
 
 func patchBodyAttributes(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, error) {
