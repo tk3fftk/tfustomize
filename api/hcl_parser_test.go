@@ -1,6 +1,9 @@
 package api_test
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -93,6 +96,82 @@ nyan = "meow"
 				t.Errorf("MergeFileBlocks() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.expect, string(hclwrite.Format(baseFile.Bytes())))
+		})
+	}
+}
+
+func TestConcatFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		contents []string
+		expect   string
+		wantErr  bool
+	}{
+		{
+			name:     "attribute in a file",
+			contents: []string{`bucket = "foo"`},
+			expect:   ``, // attribute is not a block so it results empty
+			wantErr:  false,
+		},
+		{
+			name: "a file",
+			contents: []string{`resource "aws_s3_bucket" "foo" {
+  bucket = "foo"
+}
+`,
+			},
+			expect: `resource "aws_s3_bucket" "foo" {
+  bucket = "foo"
+}
+`,
+			wantErr: false,
+		},
+		{
+			name: "multiple files",
+			contents: []string{`resource "aws_s3_bucket" "foo" {
+  bucket = "foo"
+}
+`,
+				`resource "aws_s3_bucket" "bar" {
+  bucket = "bar"
+}
+`,
+			},
+			expect: `resource "aws_s3_bucket" "foo" {
+  bucket = "foo"
+}
+resource "aws_s3_bucket" "bar" {
+  bucket = "bar"
+}
+`,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir, err := os.MkdirTemp("", "test_concat_file")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(dir)
+			var fileNames []string
+			parser := api.HCLParser{}
+
+			for i, content := range tt.contents {
+				fileName := strconv.Itoa(i) + ".tf"
+				filePath := filepath.Join(dir, fileName)
+				if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+					t.Fatal(err)
+				}
+				fileNames = append(fileNames, fileName)
+			}
+
+			hclFile, err := parser.ConcatFile(dir, fileNames)
+			if (err != nil) || tt.wantErr {
+				t.Errorf("%q. ConcatFile() error = %v, wantErr %v", tt.name, err, tt.wantErr)
+			}
+			assert.Equal(t, tt.expect, string(hclwrite.Format(hclFile.Bytes())))
 		})
 	}
 }
