@@ -3,6 +3,7 @@ package api_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/tk3fftk/tfustomize/api"
 	"github.com/zclconf/go-cty/cty"
 )
+
+var regexpFormatNewLines = regexp.MustCompile(`\n{2,}`)
 
 func TestPatchFileAttributes(t *testing.T) {
 	tests := []struct {
@@ -179,27 +182,45 @@ resource "aws_s3_bucket" "bar" {
 func TestMergeFileBlocks(t *testing.T) {
 	tests := []struct {
 		name    string
-		base    *hclwrite.File
-		overlay *hclwrite.File
+		base    []string
+		overlay []string
+		expect  string
 		wantErr bool
 	}{
 		{
-			name:    "valid merge",
-			base:    hclwrite.NewEmptyFile(),
-			overlay: hclwrite.NewEmptyFile(),
+			name:    "locals merge test",
+			base:    []string{"base/only_locals.tf"},
+			overlay: []string{"overlay/only_locals.tf"},
+			expect: `locals {
+  a = 1
+  b = 2
+  c = 3
+  d = 4
+}
+`,
 			wantErr: false,
 		},
-		// Add more test cases here
 	}
 
+	testDir := "../test"
 	parser := api.HCLParser{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parser.MergeFileBlocks(tt.base, tt.overlay)
-			if (err != nil) != tt.wantErr {
+			baseHCL, err := parser.ConcatFile(testDir, tt.base)
+			if err != nil {
+				t.Fatal(err)
+			}
+			overlayHCL, err := parser.ConcatFile(testDir, tt.overlay)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := parser.MergeFileBlocks(baseHCL, overlayHCL)
+			if (err != nil) || tt.wantErr {
 				t.Errorf("MergeFileBlocks() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			assert.Equal(t, tt.expect, regexpFormatNewLines.ReplaceAllString(string(hclwrite.Format(result.Bytes())), "\n"))
 		})
 	}
 }
