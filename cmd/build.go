@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/spf13/cobra"
 	"github.com/tk3fftk/tfustomize/api"
 )
+
+var regexpFormatNewLines = regexp.MustCompile(`\n{2,}`)
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
@@ -58,7 +61,8 @@ var buildCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("%s", hclwrite.Format(baseHCLFile.Bytes()))
+		result := string(hclwrite.Format(baseHCLFile.Bytes()))
+		fmt.Printf("%s", regexpFormatNewLines.ReplaceAllString(result, "\n"))
 
 		return nil
 	},

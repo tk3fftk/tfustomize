@@ -34,12 +34,6 @@ func (p HCLParser) ReadHCLFile(filename string) (*hclwrite.File, error) {
 	return file, nil
 }
 
-func (p HCLParser) PatchFileAttributes(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
-	patchBodyAttributes(base.Body(), overlay.Body())
-	base.Body().AppendNewline()
-	return base, nil
-}
-
 func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, error) {
 	outputFile := hclwrite.NewEmptyFile()
 
@@ -54,6 +48,11 @@ func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, 
 	}
 
 	return outputFile, nil
+}
+
+func (p HCLParser) PatchFileAttributes(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
+	patchBodyAttributes(base.Body(), overlay.Body())
+	return base, nil
 }
 
 func patchBodyAttributes(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, error) {
@@ -143,12 +142,14 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	for name, overlayLocalAttribute := range overlayLocals {
 		baseLocals[name] = overlayLocalAttribute
 	}
-	resultedLocalBlock := hclwrite.NewBlock("locals", nil)
-	for name, attribute := range baseLocals {
-		resultedLocalBlock.Body().SetAttributeRaw(name, attribute.Expr().BuildTokens(nil))
+	if len(baseLocals) != 0 {
+		resultedLocalBlock := hclwrite.NewBlock("locals", nil)
+		for name, attribute := range baseLocals {
+			resultedLocalBlock.Body().SetAttributeRaw(name, attribute.Expr().BuildTokens(nil))
+		}
+		base.AppendBlock(resultedLocalBlock)
+		base.AppendNewline()
 	}
-	base.AppendBlock(resultedLocalBlock)
-	base.AppendNewline()
 
 	for _, tmpBlock := range tmpBlocks {
 		for _, block := range tmpBlock {
