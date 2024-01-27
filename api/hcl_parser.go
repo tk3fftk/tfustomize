@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -139,13 +140,20 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		}
 	}
 
-	for name, overlayLocalAttribute := range overlayLocals {
-		baseLocals[name] = overlayLocalAttribute
-	}
 	if len(baseLocals) != 0 {
+		for name, overlayLocalAttribute := range overlayLocals {
+			baseLocals[name] = overlayLocalAttribute
+		}
+
+		sortedNames := make([]string, 0, len(baseLocals))
+		for name := range baseLocals {
+			sortedNames = append(sortedNames, name)
+		}
+		sort.Strings(sortedNames)
+
 		resultedLocalBlock := hclwrite.NewBlock("locals", nil)
-		for name, attribute := range baseLocals {
-			resultedLocalBlock.Body().SetAttributeRaw(name, attribute.Expr().BuildTokens(nil))
+		for _, name := range sortedNames {
+			resultedLocalBlock.Body().SetAttributeRaw(name, baseLocals[name].Expr().BuildTokens(nil))
 		}
 		base.AppendBlock(resultedLocalBlock)
 		base.AppendNewline()
