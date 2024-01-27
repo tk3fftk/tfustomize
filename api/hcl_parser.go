@@ -51,35 +51,6 @@ func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, 
 	return outputFile, nil
 }
 
-func (p HCLParser) PatchFileAttributes(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
-	patchBodyAttributes(base.Body(), overlay.Body())
-	return base, nil
-}
-
-func patchBodyAttributes(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, error) {
-	overlayAttributes := overlay.Attributes()
-
-	// use overlay attributes if they exist
-	for name, overlayAttribute := range overlayAttributes {
-		// Parse the attribute's tokens into an expression
-		// filename is used only for diagnostic messages. so it can be placeholder string.
-		expr, diags := hclsyntax.ParseExpression(overlayAttribute.Expr().BuildTokens(nil).Bytes(), "overlays", hcl.InitialPos)
-		if diags.HasErrors() {
-			return nil, diags
-		}
-
-		// Evaluate the expression to get a cty.Value
-		val, diags := expr.Value(nil)
-		if diags.HasErrors() {
-			return nil, diags
-		}
-
-		base.SetAttributeValue(name, val)
-	}
-
-	return base, nil
-}
-
 func setBodyAttribute(target *hclwrite.Body, name string, attr *hclwrite.Attribute) (*hclwrite.Body, error) {
 	// Parse the attribute's tokens into an expression
 	// filename is used only for diagnostic messages. so it can be placeholder string.
