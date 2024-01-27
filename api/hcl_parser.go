@@ -142,12 +142,14 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	for name, overlayLocalAttribute := range overlayLocals {
 		baseLocals[name] = overlayLocalAttribute
 	}
-	resultedLocalBlock := hclwrite.NewBlock("locals", nil)
-	for name, attribute := range baseLocals {
-		resultedLocalBlock.Body().SetAttributeRaw(name, attribute.Expr().BuildTokens(nil))
+	if len(baseLocals) != 0 {
+		resultedLocalBlock := hclwrite.NewBlock("locals", nil)
+		for name, attribute := range baseLocals {
+			resultedLocalBlock.Body().SetAttributeRaw(name, attribute.Expr().BuildTokens(nil))
+		}
+		base.AppendBlock(resultedLocalBlock)
+		base.AppendNewline()
 	}
-	base.AppendBlock(resultedLocalBlock)
-	base.AppendNewline()
 
 	for _, tmpBlock := range tmpBlocks {
 		for _, block := range tmpBlock {

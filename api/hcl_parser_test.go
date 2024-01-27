@@ -200,6 +200,20 @@ func TestMergeFileBlocks(t *testing.T) {
 `,
 			wantErr: false,
 		},
+		{
+			name:    "data source without blocks merge test",
+			base:    []string{"base/data_without_block.tf"},
+			overlay: []string{"overlay/data_without_block.tf"},
+			expect: `data "aws_ami" "ubuntu" {
+  executable_users   = ["self"]
+  most_recent        = true
+  name_regex         = "^myami-\\d{3}"
+  owners             = ["099720109477"]
+  include_deprecated = true
+}
+`,
+			wantErr: false,
+		},
 	}
 
 	testDir := "../test"
