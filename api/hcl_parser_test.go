@@ -214,6 +214,23 @@ func TestMergeFileBlocks(t *testing.T) {
 `,
 			wantErr: false,
 		},
+		{
+			name:    "data source with append block merge test",
+			base:    []string{"base/data_with_block.tf"},
+			overlay: []string{"overlay/data_with_block.tf"},
+			expect: `data "aws_ami" "ubuntu" {
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+`,
+			wantErr: false,
+		},
 	}
 
 	testDir := "../test"
