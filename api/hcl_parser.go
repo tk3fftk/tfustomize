@@ -80,6 +80,25 @@ func patchBodyAttributes(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite
 	return base, nil
 }
 
+func setBodyAttribute(target *hclwrite.Body, name string, attr *hclwrite.Attribute) (*hclwrite.Body, error) {
+	// Parse the attribute's tokens into an expression
+	// filename is used only for diagnostic messages. so it can be placeholder string.
+	expr, diags := hclsyntax.ParseExpression(attr.Expr().BuildTokens(nil).Bytes(), "overlays", hcl.InitialPos)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	// Evaluate the expression to get a cty.Value
+	val, diags := expr.Value(nil)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	target.SetAttributeValue(name, val)
+
+	return target, nil
+}
+
 func (p HCLParser) MergeFileBlocks(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
 	mergeBlocks(base.Body(), overlay.Body())
 	return base, nil
@@ -170,27 +189,43 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 }
 
 func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwrite.Block, error) {
+	resultBlock := hclwrite.NewBlock(baseBlock.Type(), baseBlock.Labels())
+	resultBlockBody := resultBlock.Body()
 	baseBlockBody := baseBlock.Body()
 	overlayBlockBody := overlayBlock.Body()
 
-	// どちらにも定義があるattributeをpatch
-	patchBodyAttributes(baseBlockBody, overlayBlockBody)
+	tmpAttributes := map[string]*hclwrite.Attribute{}
 
-	// overlay側にのみ定義があるattirbuteを追加
-	// obtain and add attributes that are only defined in overlay
-	overlayBodyAttributes := overlayBlockBody.Attributes()
-	for name, overlayAttribute := range overlayBodyAttributes {
-		if baseBlockBody.GetAttribute(name) == nil {
-			baseBlockBody.SetAttributeRaw(name, overlayAttribute.Expr().BuildTokens(nil))
+	for name, baseBlockBodyArrtibute := range baseBlockBody.Attributes() {
+		tmpAttributes[name] = baseBlockBodyArrtibute
+	}
+	for name, overlayBlockBodyArrtibute := range overlayBlockBody.Attributes() {
+		tmpAttributes[name] = overlayBlockBodyArrtibute
+	}
+
+	sortedNames := make([]string, 0, len(tmpAttributes))
+	for name := range tmpAttributes {
+		sortedNames = append(sortedNames, name)
+	}
+	sort.Strings(sortedNames)
+
+	for _, name := range sortedNames {
+		_, err := setBodyAttribute(resultBlockBody, name, tmpAttributes[name])
+		if err != nil {
+			return resultBlock, err
 		}
 	}
 
-	// add blocks that are defined in overlay
-	overlayBodyBlocks := overlayBlockBody.Blocks()
-	for _, overlayBlock := range overlayBodyBlocks {
-		baseBlockBody.AppendNewline()
-		baseBlockBody.AppendBlock(overlayBlock)
+	// TODO: User can choose patch or append block
+	// append blocks that are defined in overlay
+	for _, baseBlockBodyBlock := range baseBlockBody.Blocks() {
+		resultBlockBody.AppendNewline()
+		resultBlockBody.AppendBlock(baseBlockBodyBlock)
+	}
+	for _, overlayBlockBodyBlock := range overlayBlockBody.Blocks() {
+		resultBlockBody.AppendNewline()
+		resultBlockBody.AppendBlock(overlayBlockBodyBlock)
 	}
 
-	return baseBlock, nil
+	return resultBlock, nil
 }

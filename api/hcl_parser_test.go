@@ -46,7 +46,7 @@ func TestPatchFileAttributes(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "multi var and single patch",
+			name: "multi vars and single patch",
 			base: map[string]string{
 				"foo":  "bar",
 				"hoge": "fuga",
@@ -60,7 +60,7 @@ hoge = "fuga"
 			wantErr: false,
 		},
 		{
-			name: "multi var and single patch and add new var",
+			name: "multi vars and single patch and add new vars",
 			base: map[string]string{
 				"foo":  "bar",
 				"hoge": "fuga",
@@ -68,10 +68,12 @@ hoge = "fuga"
 			overlay: map[string]string{
 				"foo":  "baz",
 				"nyan": "meow",
+				"zzz":  "zzz",
 			},
 			expect: `foo  = "baz"
 hoge = "fuga"
 nyan = "meow"
+zzz  = "zzz"
 `,
 			wantErr: false,
 		},
@@ -206,10 +208,10 @@ func TestMergeFileBlocks(t *testing.T) {
 			overlay: []string{"overlay/data_without_block.tf"},
 			expect: `data "aws_ami" "ubuntu" {
   executable_users   = ["self"]
+  include_deprecated = true
   most_recent        = true
   name_regex         = "^myami-\\d{3}"
   owners             = ["099720109477"]
-  include_deprecated = true
 }
 `,
 			wantErr: false,
