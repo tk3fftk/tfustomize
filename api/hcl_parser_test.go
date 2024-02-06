@@ -82,10 +82,12 @@ resource "aws_s3_bucket" "bar" {
 			}
 
 			hclFile, err := parser.ConcatFile(dir, fileNames)
-			if (err != nil) || tt.wantErr {
+			if err != nil && !tt.wantErr {
 				t.Errorf("%q. ConcatFile() error = %v, wantErr %v", tt.name, err, tt.wantErr)
+				assert.Fail(t, "unexpected error")
+			} else {
+				assert.Equal(t, tt.expect, string(hclwrite.Format(hclFile.Bytes())))
 			}
-			assert.Equal(t, tt.expect, string(hclwrite.Format(hclFile.Bytes())))
 		})
 	}
 }
@@ -142,6 +144,28 @@ func TestMergeFileBlocks(t *testing.T) {
 `,
 			wantErr: false,
 		},
+		{
+			name:    "data source and resource",
+			base:    []string{"base/data_and_resource.tf"},
+			overlay: []string{"overlay/data_and_resource.tf"},
+			expect: `data "aws_ami" "ubuntu" {
+  most_recent = false
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
+resource "aws_instance" "web" {
+  ami               = data.aws_ami.ubuntu.id
+  availability_zone = "ap-northeast-1a"
+  instance_type     = "t3.large"
+  tags = {
+    Name = "HelloWorld"
+  }
+}
+`,
+			wantErr: false,
+		},
 	}
 
 	testDir := "../test"
@@ -159,10 +183,12 @@ func TestMergeFileBlocks(t *testing.T) {
 			}
 
 			result, err := parser.MergeFileBlocks(baseHCL, overlayHCL)
-			if (err != nil) || tt.wantErr {
+			if err != nil && !tt.wantErr {
 				t.Errorf("MergeFileBlocks() error = %v, wantErr %v", err, tt.wantErr)
+				assert.Fail(t, "unexpected error")
+			} else {
+				assert.Equal(t, tt.expect, regexpFormatNewLines.ReplaceAllString(string(hclwrite.Format(result.Bytes())), "\n"))
 			}
-			assert.Equal(t, tt.expect, regexpFormatNewLines.ReplaceAllString(string(hclwrite.Format(result.Bytes())), "\n"))
 		})
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
@@ -52,20 +51,8 @@ func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, 
 }
 
 func setBodyAttribute(target *hclwrite.Body, name string, attr *hclwrite.Attribute) (*hclwrite.Body, error) {
-	// Parse the attribute's tokens into an expression
-	// filename is used only for diagnostic messages. so it can be placeholder string.
-	expr, diags := hclsyntax.ParseExpression(attr.Expr().BuildTokens(nil).Bytes(), "overlays", hcl.InitialPos)
-	if diags.HasErrors() {
-		return nil, diags
-	}
-
-	// Evaluate the expression to get a cty.Value
-	val, diags := expr.Value(nil)
-	if diags.HasErrors() {
-		return nil, diags
-	}
-
-	target.SetAttributeValue(name, val)
+	tokens := attr.Expr().BuildTokens(nil)
+	target.SetAttributeRaw(name, tokens)
 
 	return target, nil
 }
@@ -109,6 +96,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	for _, overlayBlock := range overlayBlocks {
 		joinedLabel := strings.Join(overlayBlock.Labels(), "_")
 		blockType := overlayBlock.Type()
+		fmt.Printf("[debug] processing overlay blockType, joinedLabel: %v, %v\n", blockType, joinedLabel)
 		switch blockType {
 		case "provider", "resource", "data", "module", "terraform":
 			if tmpBlock, ok := tmpBlocks[blockType][joinedLabel]; ok {
@@ -149,8 +137,10 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		base.AppendNewline()
 	}
 
-	for _, tmpBlock := range tmpBlocks {
-		for _, block := range tmpBlock {
+	for blockType, tmpBlock := range tmpBlocks {
+		fmt.Printf("[debug] processing blockType: %v\n", blockType)
+		for joinedLabel, block := range tmpBlock {
+			fmt.Printf("[debug] processing joinedLabel: %v\n", joinedLabel)
 			base.AppendBlock(block)
 		}
 		base.AppendNewline()
@@ -181,9 +171,10 @@ func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwr
 	sort.Strings(sortedNames)
 
 	for _, name := range sortedNames {
+		fmt.Printf("[debug] processing name, value: %v, %v\n", name, tmpAttributes[name])
 		_, err := setBodyAttribute(resultBlockBody, name, tmpAttributes[name])
 		if err != nil {
-			return resultBlock, err
+			return nil, err
 		}
 	}
 
