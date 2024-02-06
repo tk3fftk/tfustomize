@@ -50,12 +50,12 @@ func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, 
 	return outputFile, nil
 }
 
-func setBodyAttribute(target *hclwrite.Body, name string, attr *hclwrite.Attribute) (*hclwrite.Body, error) {
+func setBodyAttribute(target *hclwrite.Body, name string, attr *hclwrite.Attribute) *hclwrite.Body {
 	tokens := attr.Expr().BuildTokens(nil)
 	// Do not want to treat as reference, traversal and cty.Value(literal) sogi use SetAttribute"Raw"
 	target.SetAttributeRaw(name, tokens)
 
-	return target, nil
+	return target
 }
 
 func (p HCLParser) MergeFileBlocks(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
@@ -173,10 +173,7 @@ func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwr
 
 	for _, name := range sortedNames {
 		fmt.Printf("[debug] processing name, value: %v, %v\n", name, tmpAttributes[name])
-		_, err := setBodyAttribute(resultBlockBody, name, tmpAttributes[name])
-		if err != nil {
-			return nil, err
-		}
+		setBodyAttribute(resultBlockBody, name, tmpAttributes[name])
 	}
 
 	// TODO: User can choose patch or append block
