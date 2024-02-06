@@ -132,7 +132,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 
 		resultedLocalBlock := hclwrite.NewBlock("locals", nil)
 		for _, name := range sortedNames {
-			resultedLocalBlock.Body().SetAttributeRaw(name, baseLocals[name].Expr().BuildTokens(nil))
+			setBodyAttribute(resultedLocalBlock.Body(), name, baseLocals[name])
 		}
 		base.AppendBlock(resultedLocalBlock)
 		base.AppendNewline()
