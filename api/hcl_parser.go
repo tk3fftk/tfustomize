@@ -52,6 +52,7 @@ func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, 
 
 func setBodyAttribute(target *hclwrite.Body, name string, attr *hclwrite.Attribute) (*hclwrite.Body, error) {
 	tokens := attr.Expr().BuildTokens(nil)
+	// Do not want to treat as reference, traversal and cty.Value(literal) sogi use SetAttribute"Raw"
 	target.SetAttributeRaw(name, tokens)
 
 	return target, nil
