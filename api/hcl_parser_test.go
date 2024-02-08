@@ -10,98 +10,9 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/stretchr/testify/assert"
 	"github.com/tk3fftk/tfustomize/api"
-	"github.com/zclconf/go-cty/cty"
 )
 
 var regexpFormatNewLines = regexp.MustCompile(`\n{2,}`)
-
-func TestPatchFileAttributes(t *testing.T) {
-	tests := []struct {
-		name    string
-		base    map[string]string
-		overlay map[string]string
-		expect  string
-		wantErr bool
-	}{
-		{
-			name: "no overlay",
-			base: map[string]string{
-				"foo": "bar",
-			},
-			overlay: map[string]string{},
-			expect: `foo = "bar"
-`,
-			wantErr: false,
-		},
-		{
-			name: "single var patch",
-			base: map[string]string{
-				"foo": "bar",
-			},
-			overlay: map[string]string{
-				"foo": "baz",
-			},
-			expect: `foo = "baz"
-`,
-			wantErr: false,
-		},
-		{
-			name: "multi var and single patch",
-			base: map[string]string{
-				"foo":  "bar",
-				"hoge": "fuga",
-			},
-			overlay: map[string]string{
-				"foo": "baz",
-			},
-			expect: `foo  = "baz"
-hoge = "fuga"
-`,
-			wantErr: false,
-		},
-		{
-			name: "multi var and single patch and add new var",
-			base: map[string]string{
-				"foo":  "bar",
-				"hoge": "fuga",
-			},
-			overlay: map[string]string{
-				"foo":  "baz",
-				"nyan": "meow",
-			},
-			expect: `foo  = "baz"
-hoge = "fuga"
-nyan = "meow"
-`,
-			wantErr: false,
-		},
-	}
-
-	parser := api.HCLParser{}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			baseFile := hclwrite.NewEmptyFile()
-			overlayFile := hclwrite.NewEmptyFile()
-
-			baseBody := baseFile.Body()
-			overlayBody := overlayFile.Body()
-
-			for k, v := range tt.base {
-				baseBody.SetAttributeValue(k, cty.StringVal(v))
-			}
-			for k, v := range tt.overlay {
-				overlayBody.SetAttributeValue(k, cty.StringVal(v))
-			}
-
-			_, err := parser.PatchFileAttributes(baseFile, overlayFile)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MergeFileBlocks() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			assert.Equal(t, tt.expect, string(hclwrite.Format(baseFile.Bytes())))
-		})
-	}
-}
 
 func TestConcatFile(t *testing.T) {
 	tests := []struct {
@@ -171,10 +82,12 @@ resource "aws_s3_bucket" "bar" {
 			}
 
 			hclFile, err := parser.ConcatFile(dir, fileNames)
-			if (err != nil) || tt.wantErr {
+			if err != nil && !tt.wantErr {
 				t.Errorf("%q. ConcatFile() error = %v, wantErr %v", tt.name, err, tt.wantErr)
+				assert.Fail(t, "unexpected error")
+			} else {
+				assert.Equal(t, tt.expect, string(hclwrite.Format(hclFile.Bytes())))
 			}
-			assert.Equal(t, tt.expect, string(hclwrite.Format(hclFile.Bytes())))
 		})
 	}
 }
@@ -206,10 +119,10 @@ func TestMergeFileBlocks(t *testing.T) {
 			overlay: []string{"overlay/data_without_block.tf"},
 			expect: `data "aws_ami" "ubuntu" {
   executable_users   = ["self"]
+  include_deprecated = true
   most_recent        = true
   name_regex         = "^myami-\\d{3}"
   owners             = ["099720109477"]
-  include_deprecated = true
 }
 `,
 			wantErr: false,
@@ -231,6 +144,72 @@ func TestMergeFileBlocks(t *testing.T) {
 `,
 			wantErr: false,
 		},
+		{
+			name:    "data source and resource",
+			base:    []string{"base/data_and_resource.tf"},
+			overlay: []string{"overlay/data_and_resource.tf"},
+			expect: `data "aws_ami" "ubuntu" {
+  most_recent = false
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
+resource "aws_instance" "web" {
+  ami               = data.aws_ami.ubuntu.id
+  availability_zone = "ap-northeast-1a"
+  instance_type     = "t3.large"
+  tags = {
+    Name = "HelloWorld"
+  }
+}
+`,
+			wantErr: false,
+		},
+		{
+			name:    "all types of blocks",
+			base:    []string{"base/all_blocks.tf"},
+			overlay: []string{"overlay/all_blocks.tf"},
+			expect: `locals {
+  a = 1
+  b = 2
+}
+data "aws_ami" "example" {
+  most_recent = false
+  owners      = ["self"]
+}
+module "vpc" {
+  cidr    = "10.0.0.0/16"
+  name    = "staging-vpc"
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "2.77.0"
+}
+output "instance_ip_addr" {
+  value = aws_instance.example.public_ip
+}
+provider "aws" {
+  region = "ap-northeast-1"
+}
+resource "aws_instance" "example" {
+  ami           = "ami-0c94855ba95c574c8"
+  instance_type = "t2.medium"
+}
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+variable "image_id" {
+  default     = "ami-0c94855ba95c574c8"
+  description = "foo"
+}
+`,
+			wantErr: false,
+		},
 	}
 
 	testDir := "../test"
@@ -248,10 +227,12 @@ func TestMergeFileBlocks(t *testing.T) {
 			}
 
 			result, err := parser.MergeFileBlocks(baseHCL, overlayHCL)
-			if (err != nil) || tt.wantErr {
+			if err != nil && !tt.wantErr {
 				t.Errorf("MergeFileBlocks() error = %v, wantErr %v", err, tt.wantErr)
+				assert.Fail(t, "unexpected error")
+			} else {
+				assert.Equal(t, tt.expect, regexpFormatNewLines.ReplaceAllString(string(hclwrite.Format(result.Bytes())), "\n"))
 			}
-			assert.Equal(t, tt.expect, regexpFormatNewLines.ReplaceAllString(string(hclwrite.Format(result.Bytes())), "\n"))
 		})
 	}
 }

@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
+
+var tfBlockTypes = []string{"data", "module", "output", "provider", "resource", "terraform", "variable"}
 
 type HCLParser struct {
 }
@@ -50,33 +52,12 @@ func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, 
 	return outputFile, nil
 }
 
-func (p HCLParser) PatchFileAttributes(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
-	patchBodyAttributes(base.Body(), overlay.Body())
-	return base, nil
-}
+func setBodyAttribute(target *hclwrite.Body, name string, attr *hclwrite.Attribute) *hclwrite.Body {
+	tokens := attr.Expr().BuildTokens(nil)
+	// Do not want to treat as reference, traversal and cty.Value(literal) sogi use SetAttribute"Raw"
+	target.SetAttributeRaw(name, tokens)
 
-func patchBodyAttributes(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, error) {
-	overlayAttributes := overlay.Attributes()
-
-	// use overlay attributes if they exist
-	for name, overlayAttribute := range overlayAttributes {
-		// Parse the attribute's tokens into an expression
-		// filename is used only for diagnostic messages. so it can be placeholder string.
-		expr, diags := hclsyntax.ParseExpression(overlayAttribute.Expr().BuildTokens(nil).Bytes(), "overlays", hcl.InitialPos)
-		if diags.HasErrors() {
-			return nil, diags
-		}
-
-		// Evaluate the expression to get a cty.Value
-		val, diags := expr.Value(nil)
-		if diags.HasErrors() {
-			return nil, diags
-		}
-
-		base.SetAttributeValue(name, val)
-	}
-
-	return base, nil
+	return target
 }
 
 func (p HCLParser) MergeFileBlocks(base *hclwrite.File, overlay *hclwrite.File) (*hclwrite.File, error) {
@@ -98,7 +79,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		joinedLabel := strings.Join(baseBlock.Labels(), "_")
 		blockType := baseBlock.Type()
 		switch blockType {
-		case "provider", "resource", "data", "module", "terraform":
+		case "data", "module", "output", "provider", "resource", "terraform", "variable":
 			if tmpBlocks[blockType] == nil {
 				tmpBlocks[blockType] = map[string]*hclwrite.Block{}
 			}
@@ -118,8 +99,9 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	for _, overlayBlock := range overlayBlocks {
 		joinedLabel := strings.Join(overlayBlock.Labels(), "_")
 		blockType := overlayBlock.Type()
+		fmt.Printf("[debug] processing overlay blockType, joinedLabel: %v, %v\n", blockType, joinedLabel)
 		switch blockType {
-		case "provider", "resource", "data", "module", "terraform":
+		case "data", "module", "output", "provider", "resource", "terraform", "variable":
 			if tmpBlock, ok := tmpBlocks[blockType][joinedLabel]; ok {
 				mergedBlock, err := mergeBlock(tmpBlock, overlayBlock)
 				if err != nil {
@@ -139,20 +121,32 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		}
 	}
 
-	for name, overlayLocalAttribute := range overlayLocals {
-		baseLocals[name] = overlayLocalAttribute
-	}
 	if len(baseLocals) != 0 {
+		for name, overlayLocalAttribute := range overlayLocals {
+			baseLocals[name] = overlayLocalAttribute
+		}
+
+		sortedNames := make([]string, 0, len(baseLocals))
+		for name := range baseLocals {
+			sortedNames = append(sortedNames, name)
+		}
+		sort.Strings(sortedNames)
+
 		resultedLocalBlock := hclwrite.NewBlock("locals", nil)
-		for name, attribute := range baseLocals {
-			resultedLocalBlock.Body().SetAttributeRaw(name, attribute.Expr().BuildTokens(nil))
+		for _, name := range sortedNames {
+			setBodyAttribute(resultedLocalBlock.Body(), name, baseLocals[name])
 		}
 		base.AppendBlock(resultedLocalBlock)
 		base.AppendNewline()
 	}
 
-	for _, tmpBlock := range tmpBlocks {
-		for _, block := range tmpBlock {
+	for _, blockType := range tfBlockTypes {
+		if tmpBlocks[blockType] == nil {
+			continue
+		}
+		fmt.Printf("[debug] processing blockType: %v\n", blockType)
+		for joinedLabel, block := range tmpBlocks[blockType] {
+			fmt.Printf("[debug] processing joinedLabel: %v\n", joinedLabel)
 			base.AppendBlock(block)
 		}
 		base.AppendNewline()
@@ -162,27 +156,41 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 }
 
 func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwrite.Block, error) {
+	resultBlock := hclwrite.NewBlock(baseBlock.Type(), baseBlock.Labels())
+	resultBlockBody := resultBlock.Body()
 	baseBlockBody := baseBlock.Body()
 	overlayBlockBody := overlayBlock.Body()
 
-	// どちらにも定義があるattributeをpatch
-	patchBodyAttributes(baseBlockBody, overlayBlockBody)
+	tmpAttributes := map[string]*hclwrite.Attribute{}
 
-	// overlay側にのみ定義があるattirbuteを追加
-	// obtain and add attributes that are only defined in overlay
-	overlayBodyAttributes := overlayBlockBody.Attributes()
-	for name, overlayAttribute := range overlayBodyAttributes {
-		if baseBlockBody.GetAttribute(name) == nil {
-			baseBlockBody.SetAttributeRaw(name, overlayAttribute.Expr().BuildTokens(nil))
-		}
+	for name, baseBlockBodyArrtibute := range baseBlockBody.Attributes() {
+		tmpAttributes[name] = baseBlockBodyArrtibute
+	}
+	for name, overlayBlockBodyArrtibute := range overlayBlockBody.Attributes() {
+		tmpAttributes[name] = overlayBlockBodyArrtibute
 	}
 
-	// add blocks that are defined in overlay
-	overlayBodyBlocks := overlayBlockBody.Blocks()
-	for _, overlayBlock := range overlayBodyBlocks {
-		baseBlockBody.AppendNewline()
-		baseBlockBody.AppendBlock(overlayBlock)
+	sortedNames := make([]string, 0, len(tmpAttributes))
+	for name := range tmpAttributes {
+		sortedNames = append(sortedNames, name)
+	}
+	sort.Strings(sortedNames)
+
+	for _, name := range sortedNames {
+		fmt.Printf("[debug] processing name, value: %v, %v\n", name, tmpAttributes[name])
+		setBodyAttribute(resultBlockBody, name, tmpAttributes[name])
 	}
 
-	return baseBlock, nil
+	// TODO: User can choose patch or append block
+	// append blocks that are defined in overlay
+	for _, baseBlockBodyBlock := range baseBlockBody.Blocks() {
+		resultBlockBody.AppendNewline()
+		resultBlockBody.AppendBlock(baseBlockBodyBlock)
+	}
+	for _, overlayBlockBodyBlock := range overlayBlockBody.Blocks() {
+		resultBlockBody.AppendNewline()
+		resultBlockBody.AppendBlock(overlayBlockBodyBlock)
+	}
+
+	return resultBlock, nil
 }

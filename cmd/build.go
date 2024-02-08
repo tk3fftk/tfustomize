@@ -52,10 +52,6 @@ var buildCmd = &cobra.Command{
 			return err
 		}
 
-		_, err = parser.PatchFileAttributes(baseHCLFile, overlayHCLFile)
-		if err != nil {
-			return err
-		}
 		_, err = parser.MergeFileBlocks(baseHCLFile, overlayHCLFile)
 		if err != nil {
 			return err
