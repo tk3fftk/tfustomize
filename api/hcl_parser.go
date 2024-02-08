@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
-var tfBlockTypes = []string{"data", "module", "provider", "resource", "terraform"}
+var tfBlockTypes = []string{"data", "module", "output", "provider", "resource", "terraform", "variable"}
 
 type HCLParser struct {
 }
@@ -79,7 +79,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		joinedLabel := strings.Join(baseBlock.Labels(), "_")
 		blockType := baseBlock.Type()
 		switch blockType {
-		case "provider", "resource", "data", "module", "terraform":
+		case "data", "module", "output", "provider", "resource", "terraform", "variable":
 			if tmpBlocks[blockType] == nil {
 				tmpBlocks[blockType] = map[string]*hclwrite.Block{}
 			}
@@ -101,7 +101,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		blockType := overlayBlock.Type()
 		fmt.Printf("[debug] processing overlay blockType, joinedLabel: %v, %v\n", blockType, joinedLabel)
 		switch blockType {
-		case "provider", "resource", "data", "module", "terraform":
+		case "data", "module", "output", "provider", "resource", "terraform", "variable":
 			if tmpBlock, ok := tmpBlocks[blockType][joinedLabel]; ok {
 				mergedBlock, err := mergeBlock(tmpBlock, overlayBlock)
 				if err != nil {
