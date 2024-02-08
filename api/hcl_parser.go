@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
+var tfBlockTypes = []string{"data", "module", "provider", "resource", "terraform"}
+
 type HCLParser struct {
 }
 
@@ -138,9 +140,12 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		base.AppendNewline()
 	}
 
-	for blockType, tmpBlock := range tmpBlocks {
+	for _, blockType := range tfBlockTypes {
+		if tmpBlocks[blockType] == nil {
+			continue
+		}
 		fmt.Printf("[debug] processing blockType: %v\n", blockType)
-		for joinedLabel, block := range tmpBlock {
+		for joinedLabel, block := range tmpBlocks[blockType] {
 			fmt.Printf("[debug] processing joinedLabel: %v\n", joinedLabel)
 			base.AppendBlock(block)
 		}
