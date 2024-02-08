@@ -166,6 +166,50 @@ resource "aws_instance" "web" {
 `,
 			wantErr: false,
 		},
+		{
+			name:    "all types of blocks",
+			base:    []string{"base/all_blocks.tf"},
+			overlay: []string{"overlay/all_blocks.tf"},
+			expect: `locals {
+  a = 1
+  b = 2
+}
+data "aws_ami" "example" {
+  most_recent = false
+  owners      = ["self"]
+}
+module "vpc" {
+  cidr    = "10.0.0.0/16"
+  name    = "staging-vpc"
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "2.77.0"
+}
+output "instance_ip_addr" {
+  value = aws_instance.example.public_ip
+}
+provider "aws" {
+  region = "ap-northeast-1"
+}
+resource "aws_instance" "example" {
+  ami           = "ami-0c94855ba95c574c8"
+  instance_type = "t2.medium"
+}
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
+}
+variable "image_id" {
+  default     = "ami-0c94855ba95c574c8"
+  description = "foo"
+}
+`,
+			wantErr: false,
+		},
 	}
 
 	testDir := "../test"
