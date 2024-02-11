@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -39,7 +40,7 @@ var buildCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("%+v\n", conf)
+		slog.Debug("tfustomization.hcl is loaded", "path", tfustomizationPath, "conf", conf)
 
 		parser := api.NewHCLParser()
 
