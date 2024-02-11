@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,10 +19,14 @@ var regexpFormatNewLines = regexp.MustCompile(`\n{2,}`)
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
-	Use:   "build",
+	Use:   "build [dir]",
 	Short: "Build a tfustomization target from a directory.",
-	Long:  `Build a tfustomization target from a directory.`,
-	Args:  cobra.MaximumNArgs(1),
+	Long: `The 'build' command constructs a tfustomization target from a specified directory. 
+
+It checks for a 'tfustomization.hcl' file in the directory, loads the configuration.
+
+The command concatenates files specified in the resources and patches blocks, merges them, and prints the result to the console.`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		baseConfDir := filepath.Base("")
 		if len(args) == 1 {
@@ -39,7 +44,7 @@ var buildCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("%+v\n", conf)
+		slog.Debug("tfustomization.hcl is loaded", "path", tfustomizationPath, "conf", conf)
 
 		parser := api.NewHCLParser()
 

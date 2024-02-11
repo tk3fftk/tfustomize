@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -99,7 +100,8 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	for _, overlayBlock := range overlayBlocks {
 		joinedLabel := strings.Join(overlayBlock.Labels(), "_")
 		blockType := overlayBlock.Type()
-		fmt.Printf("[debug] processing overlay blockType, joinedLabel: %v, %v\n", blockType, joinedLabel)
+		slog.Debug("processing overlay blocks", "blockType", blockType, "joinedLabel", joinedLabel)
+
 		switch blockType {
 		case "data", "module", "output", "provider", "resource", "terraform", "variable":
 			if tmpBlock, ok := tmpBlocks[blockType][joinedLabel]; ok {
@@ -141,12 +143,13 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	}
 
 	for _, blockType := range tfBlockTypes {
+		slog.Debug("processing result blocks", "blockType", blockType)
 		if tmpBlocks[blockType] == nil {
+			slog.Debug("blockType is nil, so skipped", "blockType", blockType)
 			continue
 		}
-		fmt.Printf("[debug] processing blockType: %v\n", blockType)
 		for joinedLabel, block := range tmpBlocks[blockType] {
-			fmt.Printf("[debug] processing joinedLabel: %v\n", joinedLabel)
+			slog.Debug("processing result blocks", "joinedLabel", joinedLabel)
 			base.AppendBlock(block)
 		}
 		base.AppendNewline()
@@ -177,7 +180,7 @@ func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwr
 	sort.Strings(sortedNames)
 
 	for _, name := range sortedNames {
-		fmt.Printf("[debug] processing name, value: %v, %v\n", name, tmpAttributes[name])
+		slog.Debug("processing attribute", "name", name, "value", tmpAttributes[name])
 		setBodyAttribute(resultBlockBody, name, tmpAttributes[name])
 	}
 
