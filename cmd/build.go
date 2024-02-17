@@ -25,10 +25,8 @@ var buildCmd = &cobra.Command{
 	Use:   "build [dir]",
 	Short: "Build a tfustomization target from a directory.",
 	Long: `The 'build' command constructs a tfustomization target from a specified directory. 
-
 It checks for a 'tfustomization.hcl' file in the directory, loads the configuration.
-
-The command concatenates files specified in the resources and patches blocks, merges them, and prints the result to the console.`,
+The command concatenates files specified in the resources and patches blocks, merges them.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		baseConfDir := filepath.Base("")
