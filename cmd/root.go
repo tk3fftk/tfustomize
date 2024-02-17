@@ -20,7 +20,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var logLevel = new(slog.LevelVar) // Info by default
@@ -51,7 +50,6 @@ func init() {
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.tfustomize.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug mode")
-	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
