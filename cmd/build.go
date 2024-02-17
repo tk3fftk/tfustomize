@@ -70,7 +70,10 @@ The command concatenates files specified in the resources and patches blocks, me
 		} else {
 			outputDirPath := filepath.Join(baseConfDir, outputDir)
 			if _, err := os.Stat(outputDirPath); os.IsNotExist(err) {
-				os.Mkdir(outputDirPath, os.ModePerm)
+				err := os.Mkdir(outputDirPath, os.ModePerm)
+				if err != nil {
+					return err
+				}
 			}
 
 			outputFilePath := filepath.Join(outputDirPath, outputFile)
