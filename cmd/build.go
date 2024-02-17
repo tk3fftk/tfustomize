@@ -16,16 +16,17 @@ import (
 )
 
 var regexpFormatNewLines = regexp.MustCompile(`\n{2,}`)
+var print bool
+var outputDir string
+var outputFile string
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
 	Use:   "build [dir]",
 	Short: "Build a tfustomization target from a directory.",
 	Long: `The 'build' command constructs a tfustomization target from a specified directory. 
-
 It checks for a 'tfustomization.hcl' file in the directory, loads the configuration.
-
-The command concatenates files specified in the resources and patches blocks, merges them, and prints the result to the console.`,
+The command concatenates files specified in the resources and patches blocks, merges them.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		baseConfDir := filepath.Base("")
@@ -62,8 +63,25 @@ The command concatenates files specified in the resources and patches blocks, me
 			return err
 		}
 
-		result := string(hclwrite.Format(baseHCLFile.Bytes()))
-		fmt.Printf("%s", regexpFormatNewLines.ReplaceAllString(result, "\n"))
+		result := regexpFormatNewLines.ReplaceAllString(string(hclwrite.Format(baseHCLFile.Bytes())), "\n")
+
+		if print {
+			fmt.Printf("%s", result)
+		} else {
+			outputDirPath := filepath.Join(baseConfDir, outputDir)
+			if _, err := os.Stat(outputDirPath); os.IsNotExist(err) {
+				err := os.Mkdir(outputDirPath, os.ModePerm)
+				if err != nil {
+					return err
+				}
+			}
+
+			outputFilePath := filepath.Join(outputDirPath, outputFile)
+			err := os.WriteFile(outputFilePath, []byte(result), 0666)
+			if err != nil {
+				return err
+			}
+		}
 
 		return nil
 	},
@@ -80,5 +98,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// buildCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	buildCmd.Flags().BoolVarP(&print, "print", "p", false, "Print the result to the console instaed of writing to a file")
+	buildCmd.Flags().StringVarP(&outputDir, "out", "o", "generated", "Output directory")
+	buildCmd.Flags().StringVarP(&outputFile, "outfile", "f", "main.tf", "Output filename")
 }

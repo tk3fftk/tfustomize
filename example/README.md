@@ -5,10 +5,8 @@ This document provides instructions for generating Terraform configuration files
 - Generate the Terraform configuration file using `tfustomize`.
 
 ```sh
-mkdir -p {staging/production}/generated
-
-tfustomize build staging | tee staging/generated/main.tf
-tfustomize build production | tee production/generated/main.tf
+tfustomize build staging
+tfustomize build production
 ```
 
 - Run `terraform` in each directories.
