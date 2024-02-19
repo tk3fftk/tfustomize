@@ -16,20 +16,26 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
-var logLevel = new(slog.LevelVar) // Info by default
-var debug bool
+var (
+	logLevel = new(slog.LevelVar) // Info by default
+	debug    bool
+	version  = "development"
+	commit   = "n/a"
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "tfustomize",
-	Short: "Customization of Terraform HCL",
-	Long:  ``,
+	Use:     "tfustomize",
+	Short:   "Customization of Terraform HCL",
+	Long:    ``,
+	Version: fmt.Sprintf("%s (%s)", version, commit),
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
