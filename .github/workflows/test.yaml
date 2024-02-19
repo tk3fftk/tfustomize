@@ -18,6 +18,7 @@ jobs:
       - name: Build
         run: go build
       - name: goreleaser snapshot
-        run: |
-          go install github.com/goreleaser/goreleaser@latest
-          goreleaser release --snapshot --clean
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: snapshot
+          args: build --snapshot --clean
