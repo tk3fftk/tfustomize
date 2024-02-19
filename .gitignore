@@ -26,3 +26,5 @@ tfustomize
 **/.terraform.lock.hcl
 **/terraform.tfstate*
 **/generated/*
+
+dist/
