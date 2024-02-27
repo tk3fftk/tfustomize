@@ -40,7 +40,7 @@ The command concatenates files specified in the resources and patches blocks, me
 		}
 
 		conf, _ := api.LoadConfig(tfustomizationPath)
-		if len(conf.Resources.Pathes) == 0 {
+		if len(conf.Resources.Paths) == 0 {
 			err := fmt.Errorf("tfustomization.hcl must have a resources block")
 			return err
 		}
@@ -49,7 +49,7 @@ The command concatenates files specified in the resources and patches blocks, me
 
 		parser := api.NewHCLParser()
 
-		basePaths, err := parser.CollectHCLFilePaths(filepath.Dir(tfustomizationPath), conf.Resources.Pathes)
+		basePaths, err := parser.CollectHCLFilePaths(filepath.Dir(tfustomizationPath), conf.Resources.Paths)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ The command concatenates files specified in the resources and patches blocks, me
 			return err
 		}
 
-		overlayPaths, err := parser.CollectHCLFilePaths(filepath.Dir(tfustomizationPath), conf.Patches.Pathes)
+		overlayPaths, err := parser.CollectHCLFilePaths(filepath.Dir(tfustomizationPath), conf.Patches.Paths)
 		if err != nil {
 			return err
 		}

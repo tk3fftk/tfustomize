@@ -35,13 +35,13 @@ tfustomize {
 }
 
 resources {
-  pathes = [
+  paths = [
     "../../base/main.tf",
   ]
 }
 
-pathces {
-  pathes = [
+patches {
+  paths = [
     "./main.tf",
   ]
 }

@@ -15,11 +15,11 @@ type Tfustomize struct {
 }
 
 type Resource struct {
-	Pathes []string `hcl:"pathes,attr"`
+	Paths []string `hcl:"paths,attr"`
 }
 
 type Patch struct {
-	Pathes []string `hcl:"pathes,attr"`
+	Paths []string `hcl:"paths,attr"`
 }
 
 func LoadConfig(configPath string) (TfustomizeConfig, error) {

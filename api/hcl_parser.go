@@ -65,7 +65,7 @@ func (p HCLParser) CollectHCLFilePaths(baseDir string, paths []string) ([]string
 			if filepath.Ext(fileInfo.Name()) == ".tf" {
 				collectedPaths = append(collectedPaths, fullPath)
 			} else {
-				slog.Warn("Only .tf file extention is supported, so ignore the file", "filename", fileInfo.Name())
+				slog.Warn("Only .tf file extension is supported, so ignore the file", "filename", fileInfo.Name())
 			}
 		}
 	}
@@ -203,11 +203,11 @@ func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwr
 
 	tmpAttributes := map[string]*hclwrite.Attribute{}
 
-	for name, baseBlockBodyArrtibute := range baseBlockBody.Attributes() {
-		tmpAttributes[name] = baseBlockBodyArrtibute
+	for name, baseBlockBodyAttribute := range baseBlockBody.Attributes() {
+		tmpAttributes[name] = baseBlockBodyAttribute
 	}
-	for name, overlayBlockBodyArrtibute := range overlayBlockBody.Attributes() {
-		tmpAttributes[name] = overlayBlockBodyArrtibute
+	for name, overlayBlockBodyAttribute := range overlayBlockBody.Attributes() {
+		tmpAttributes[name] = overlayBlockBodyAttribute
 	}
 
 	sortedNames := make([]string, 0, len(tmpAttributes))

@@ -3,14 +3,14 @@ tfustomize {
 }
 
 resources {
-  pathes = [
+  paths = [
     "../base/main.tf",
     "../base/provider.tf",
   ]
 }
 
 patches {
-  pathes = [
+  paths = [
     "./overlay.tf",
     "./provider.tf",
   ]
