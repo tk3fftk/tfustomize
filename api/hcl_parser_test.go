@@ -14,7 +14,7 @@ import (
 
 var regexpFormatNewLines = regexp.MustCompile(`\n{2,}`)
 
-func TestConcatFile(t *testing.T) {
+func TestConcatFiles(t *testing.T) {
 	tests := []struct {
 		name     string
 		contents []string
@@ -81,7 +81,7 @@ resource "aws_s3_bucket" "bar" {
 				fileNames = append(fileNames, fileName)
 			}
 
-			hclFile, err := parser.ConcatFile(dir, fileNames)
+			hclFile, err := parser.ConcatFiles(dir, fileNames)
 			if err != nil && !tt.wantErr {
 				t.Errorf("%q. ConcatFile() error = %v, wantErr %v", tt.name, err, tt.wantErr)
 				assert.Fail(t, "unexpected error")
@@ -217,11 +217,11 @@ variable "image_id" {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			baseHCL, err := parser.ConcatFile(testDir, tt.base)
+			baseHCL, err := parser.ConcatFiles(testDir, tt.base)
 			if err != nil {
 				t.Fatal(err)
 			}
-			overlayHCL, err := parser.ConcatFile(testDir, tt.overlay)
+			overlayHCL, err := parser.ConcatFiles(testDir, tt.overlay)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -37,7 +37,8 @@ func (p HCLParser) ReadHCLFile(filename string) (*hclwrite.File, error) {
 	return file, nil
 }
 
-func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, error) {
+// ConcatFiles concatenates the contents of the given .hcl files.
+func (p HCLParser) ConcatFiles(baseDir string, pathes []string) (*hclwrite.File, error) {
 	outputFile := hclwrite.NewEmptyFile()
 
 	for _, path := range pathes {

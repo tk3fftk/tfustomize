@@ -49,11 +49,11 @@ The command concatenates files specified in the resources and patches blocks, me
 
 		parser := api.NewHCLParser()
 
-		baseHCLFile, err := parser.ConcatFile(filepath.Dir(tfustomizationPath), conf.Resources.Pathes)
+		baseHCLFile, err := parser.ConcatFiles(filepath.Dir(tfustomizationPath), conf.Resources.Pathes)
 		if err != nil {
 			return err
 		}
-		overlayHCLFile, err := parser.ConcatFile(filepath.Dir(tfustomizationPath), conf.Patches.Pathes)
+		overlayHCLFile, err := parser.ConcatFiles(filepath.Dir(tfustomizationPath), conf.Patches.Pathes)
 		if err != nil {
 			return err
 		}
