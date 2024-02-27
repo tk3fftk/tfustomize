@@ -3,11 +3,11 @@ tfustomize {
 }
 
 resources {
-  pathes = [
+  paths = [
     "main.tf",
   ]
 }
 
 patches {
-  pathes = []
+  paths = []
 }

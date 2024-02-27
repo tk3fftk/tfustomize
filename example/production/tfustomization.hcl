@@ -3,13 +3,13 @@ tfustomize {
 }
 
 resources {
-  pathes = [
+  paths = [
     "../staging/main.tf",
   ]
 }
 
 patches {
-  pathes = [
+  paths = [
     "main.tf",
   ]
 }

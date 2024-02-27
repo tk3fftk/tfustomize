@@ -1,5 +1,5 @@
 bases {
-  pathes = [
+  paths = [
     "../base/main.tf",
     "../base/provider.tf",
   ]

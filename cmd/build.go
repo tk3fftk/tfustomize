@@ -40,7 +40,7 @@ The command concatenates files specified in the resources and patches blocks, me
 		}
 
 		conf, _ := api.LoadConfig(tfustomizationPath)
-		if len(conf.Resources.Pathes) == 0 {
+		if len(conf.Resources.Paths) == 0 {
 			err := fmt.Errorf("tfustomization.hcl must have a resources block")
 			return err
 		}
@@ -49,11 +49,20 @@ The command concatenates files specified in the resources and patches blocks, me
 
 		parser := api.NewHCLParser()
 
-		baseHCLFile, err := parser.ConcatFile(filepath.Dir(tfustomizationPath), conf.Resources.Pathes)
+		basePaths, err := parser.CollectHCLFilePaths(filepath.Dir(tfustomizationPath), conf.Resources.Paths)
 		if err != nil {
 			return err
 		}
-		overlayHCLFile, err := parser.ConcatFile(filepath.Dir(tfustomizationPath), conf.Patches.Pathes)
+		baseHCLFile, err := parser.ConcatFiles(basePaths)
+		if err != nil {
+			return err
+		}
+
+		overlayPaths, err := parser.CollectHCLFilePaths(filepath.Dir(tfustomizationPath), conf.Patches.Paths)
+		if err != nil {
+			return err
+		}
+		overlayHCLFile, err := parser.ConcatFiles(overlayPaths)
 		if err != nil {
 			return err
 		}
@@ -98,7 +107,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	buildCmd.Flags().BoolVarP(&print, "print", "p", false, "Print the result to the console instaed of writing to a file")
+	buildCmd.Flags().BoolVarP(&print, "print", "p", false, "Print the result to the console instead of writing to a file")
 	buildCmd.Flags().StringVarP(&outputDir, "out", "o", "generated", "Output directory")
 	buildCmd.Flags().StringVarP(&outputFile, "outfile", "f", "main.tf", "Output filename")
 }

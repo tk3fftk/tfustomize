@@ -37,11 +37,48 @@ func (p HCLParser) ReadHCLFile(filename string) (*hclwrite.File, error) {
 	return file, nil
 }
 
-func (p HCLParser) ConcatFile(baseDir string, pathes []string) (*hclwrite.File, error) {
+// CollectHCLFilePaths returns a list of .if files in the given paths.
+// If a path is a directory, it returns all .if files in the directory.
+// If a path is a file, it returns the file if it has a .tf extension.
+// The baseDir parameter is used as the root directory when constructing the full path of each file.
+func (p HCLParser) CollectHCLFilePaths(baseDir string, paths []string) ([]string, error) {
+	var collectedPaths []string
+
+	for _, path := range paths {
+		fullPath := filepath.Join(baseDir, path)
+		fileInfo, err := os.Stat(fullPath)
+		if err != nil {
+			return nil, err
+		}
+
+		if fileInfo.IsDir() {
+			fileInfos, err := os.ReadDir(fullPath)
+			if err != nil {
+				return nil, err
+			}
+			for _, fileInfo := range fileInfos {
+				if filepath.Ext(fileInfo.Name()) == ".tf" {
+					collectedPaths = append(collectedPaths, filepath.Join(fullPath, fileInfo.Name()))
+				}
+			}
+		} else {
+			if filepath.Ext(fileInfo.Name()) == ".tf" {
+				collectedPaths = append(collectedPaths, fullPath)
+			} else {
+				slog.Warn("Only .tf file extension is supported, so ignore the file", "filename", fileInfo.Name())
+			}
+		}
+	}
+
+	return collectedPaths, nil
+}
+
+// ConcatFiles concatenates the contents of the given .tf files.
+func (p HCLParser) ConcatFiles(paths []string) (*hclwrite.File, error) {
 	outputFile := hclwrite.NewEmptyFile()
 
-	for _, path := range pathes {
-		file, err := p.ReadHCLFile(filepath.Join(baseDir, path))
+	for _, path := range paths {
+		file, err := p.ReadHCLFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -166,11 +203,11 @@ func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwr
 
 	tmpAttributes := map[string]*hclwrite.Attribute{}
 
-	for name, baseBlockBodyArrtibute := range baseBlockBody.Attributes() {
-		tmpAttributes[name] = baseBlockBodyArrtibute
+	for name, baseBlockBodyAttribute := range baseBlockBody.Attributes() {
+		tmpAttributes[name] = baseBlockBodyAttribute
 	}
-	for name, overlayBlockBodyArrtibute := range overlayBlockBody.Attributes() {
-		tmpAttributes[name] = overlayBlockBodyArrtibute
+	for name, overlayBlockBodyAttribute := range overlayBlockBody.Attributes() {
+		tmpAttributes[name] = overlayBlockBodyAttribute
 	}
 
 	sortedNames := make([]string, 0, len(tmpAttributes))
