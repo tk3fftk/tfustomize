@@ -37,6 +37,42 @@ func (p HCLParser) ReadHCLFile(filename string) (*hclwrite.File, error) {
 	return file, nil
 }
 
+// CollectHCLFilePaths returns a list of .hcl files in the given paths.
+// If a path is a directory, it returns all .hcl files in the directory.
+// If a path is a file, it returns the file if it has a .hcl extension.
+// The baseDir parameter is used as the root directory when constructing the full path of each file.
+func CollectHCLFilePaths(baseDir string, paths []string) ([]string, error) {
+	var collectedPaths []string
+
+	for _, path := range paths {
+		fullPath := filepath.Join(baseDir, path)
+		fileInfo, err := os.Stat(fullPath)
+		if err != nil {
+			return nil, err
+		}
+
+		if fileInfo.IsDir() {
+			fileInfos, err := os.ReadDir(fullPath)
+			if err != nil {
+				return nil, err
+			}
+			for _, fileInfo := range fileInfos {
+				if filepath.Ext(fileInfo.Name()) == ".tf" {
+					collectedPaths = append(collectedPaths, filepath.Join(fullPath, fileInfo.Name()))
+				}
+			}
+		} else {
+			if filepath.Ext(fileInfo.Name()) == ".tf" {
+				collectedPaths = append(collectedPaths, fullPath)
+			} else {
+				slog.Warn("Only .tf file extention is supported, so ignore the file", "filename", fileInfo.Name())
+			}
+		}
+	}
+
+	return collectedPaths, nil
+}
+
 // ConcatFiles concatenates the contents of the given .hcl files.
 func (p HCLParser) ConcatFiles(baseDir string, pathes []string) (*hclwrite.File, error) {
 	outputFile := hclwrite.NewEmptyFile()

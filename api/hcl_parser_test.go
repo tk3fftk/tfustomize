@@ -14,6 +14,50 @@ import (
 
 var regexpFormatNewLines = regexp.MustCompile(`\n{2,}`)
 
+func TestCollectHCLFilePaths(t *testing.T) {
+	tests := []struct {
+		name    string
+		baseDir string
+		paths   []string
+		expect  []string
+		wantErr bool
+	}{
+		{
+			name:    "directory",
+			baseDir: "../test",
+			paths:   []string{"./collect_hcl_file_paths"},
+			expect:  []string{"../test/collect_hcl_file_paths/1.tf", "../test/collect_hcl_file_paths/2.tf"},
+			wantErr: false,
+		},
+		{
+			name:    "file",
+			baseDir: "../test",
+			paths:   []string{"./collect_hcl_file_paths/1.tf"},
+			expect:  []string{"../test/collect_hcl_file_paths/1.tf"},
+			wantErr: false,
+		},
+		{
+			name:    "not found",
+			baseDir: "../test",
+			paths:   []string{"./collect_hcl_file_paths/not_found.tf"},
+			expect:  nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := api.CollectHCLFilePaths(tt.baseDir, tt.paths)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CollectHCLFilePaths() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, tt.expect, got)
+		})
+	}
+
+}
+
 func TestConcatFiles(t *testing.T) {
 	tests := []struct {
 		name     string

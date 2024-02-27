@@ -98,7 +98,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	buildCmd.Flags().BoolVarP(&print, "print", "p", false, "Print the result to the console instaed of writing to a file")
+	buildCmd.Flags().BoolVarP(&print, "print", "p", false, "Print the result to the console instead of writing to a file")
 	buildCmd.Flags().StringVarP(&outputDir, "out", "o", "generated", "Output directory")
 	buildCmd.Flags().StringVarP(&outputFile, "outfile", "f", "main.tf", "Output filename")
 }
