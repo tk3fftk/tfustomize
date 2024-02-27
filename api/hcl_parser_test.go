@@ -45,9 +45,11 @@ func TestCollectHCLFilePaths(t *testing.T) {
 		},
 	}
 
+	parser := api.HCLParser{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := api.CollectHCLFilePaths(tt.baseDir, tt.paths)
+			got, err := parser.CollectHCLFilePaths(tt.baseDir, tt.paths)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CollectHCLFilePaths() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -125,7 +127,12 @@ resource "aws_s3_bucket" "bar" {
 				fileNames = append(fileNames, fileName)
 			}
 
-			hclFile, err := parser.ConcatFiles(dir, fileNames)
+			filePaths, err := parser.CollectHCLFilePaths(dir, fileNames)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			hclFile, err := parser.ConcatFiles(filePaths)
 			if err != nil && !tt.wantErr {
 				t.Errorf("%q. ConcatFile() error = %v, wantErr %v", tt.name, err, tt.wantErr)
 				assert.Fail(t, "unexpected error")
@@ -261,11 +268,19 @@ variable "image_id" {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			baseHCL, err := parser.ConcatFiles(testDir, tt.base)
+			basePaths, err := parser.CollectHCLFilePaths(testDir, tt.base)
 			if err != nil {
 				t.Fatal(err)
 			}
-			overlayHCL, err := parser.ConcatFiles(testDir, tt.overlay)
+			baseHCL, err := parser.ConcatFiles(basePaths)
+			if err != nil {
+				t.Fatal(err)
+			}
+			overlayPaths, err := parser.CollectHCLFilePaths(testDir, tt.overlay)
+			if err != nil {
+				t.Fatal(err)
+			}
+			overlayHCL, err := parser.ConcatFiles(overlayPaths)
 			if err != nil {
 				t.Fatal(err)
 			}
