@@ -43,3 +43,21 @@ terraform {
     }
   }
 }
+
+import {
+  to = aws_instance.example
+  id = "i-abcd1234"
+}
+
+removed {
+  from = aws_instance.example
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+moved {
+  from = aws_instance.old_name
+  to   = aws_instance.new_name
+}

@@ -8,11 +8,27 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
-var tfBlockTypes = []string{"data", "module", "output", "provider", "resource", "terraform", "variable"}
+var tfUniqueBlockTypes = []string{
+	"data",
+	"module",
+	"output",
+	"provider",
+	"resource",
+	"terraform",
+	"variable",
+}
+
+var tfNoLableBlockTypes = []string{
+	"moved",
+	"import",
+	"removed",
+}
 
 type HCLParser struct {
 }
@@ -113,34 +129,40 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 	overlayLocals := map[string]*hclwrite.Attribute{}
 
 	for _, baseBlock := range baseBlocks {
-		// TF的にはラベルは2つまでの利用に見えるが、HCLの仕様上はlabelを3つ以上設定できるので念のためラベルを結合した文字列をキーにしておく
+		// From the perspective of Terraform, it seems that only up to two labels can be used,
+		// but since the HCL specification allows setting three or more labels.
+		// We concatenate the labels into a string to use as a key.
 		joinedLabel := strings.Join(baseBlock.Labels(), "_")
 		blockType := baseBlock.Type()
-		switch blockType {
-		case "data", "module", "output", "provider", "resource", "terraform", "variable":
+		if slices.Contains(tfUniqueBlockTypes, blockType) {
 			if tmpBlocks[blockType] == nil {
 				tmpBlocks[blockType] = map[string]*hclwrite.Block{}
 			}
 
 			tmpBlocks[blockType][joinedLabel] = baseBlock
-		case "locals":
+		} else if blockType == "locals" {
 			for name, attribute := range baseBlock.Body().Attributes() {
 				baseLocals[name] = attribute
 			}
-		default:
-			_ = fmt.Errorf("warn: type %v has come", baseBlock.Type())
+		} else if slices.Contains(tfNoLableBlockTypes, blockType) {
+			if tmpBlocks[blockType] == nil {
+				tmpBlocks[blockType] = map[string]*hclwrite.Block{}
+			}
+
+			joinedLabel = fmt.Sprintf("%s%d", joinedLabel, len(tmpBlocks[blockType]))
+			tmpBlocks[blockType][joinedLabel] = baseBlock
+		} else {
+			_ = fmt.Errorf("warn: type %v has come. it's ignored.", blockType)
 		}
 		base.RemoveBlock(baseBlock)
 	}
 
-	// baseにあるblockをoverlayで上書きして一時保管、baseになければoverlayの値をbodyに直接追加
 	for _, overlayBlock := range overlayBlocks {
 		joinedLabel := strings.Join(overlayBlock.Labels(), "_")
 		blockType := overlayBlock.Type()
 		slog.Debug("processing overlay blocks", "blockType", blockType, "joinedLabel", joinedLabel)
 
-		switch blockType {
-		case "data", "module", "output", "provider", "resource", "terraform", "variable":
+		if slices.Contains(tfUniqueBlockTypes, blockType) {
 			if tmpBlock, ok := tmpBlocks[blockType][joinedLabel]; ok {
 				mergedBlock, err := mergeBlock(tmpBlock, overlayBlock)
 				if err != nil {
@@ -151,12 +173,16 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 				base.AppendBlock(overlayBlock)
 				base.AppendNewline()
 			}
-		case "locals":
+		} else if blockType == "locals" {
 			for name, attribute := range overlayBlock.Body().Attributes() {
 				overlayLocals[name] = attribute
 			}
-		default:
-			_ = fmt.Errorf("warn: type %v has come", overlayBlock.Type())
+		} else if slices.Contains(tfNoLableBlockTypes, blockType) {
+			// There is no lable to identify the block, so we just append it.
+			base.AppendBlock(overlayBlock)
+			base.AppendNewline()
+		} else {
+			_ = fmt.Errorf("warn: type %v has come", blockType)
 		}
 	}
 
@@ -179,7 +205,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		base.AppendNewline()
 	}
 
-	for _, blockType := range tfBlockTypes {
+	for _, blockType := range append(tfUniqueBlockTypes, tfNoLableBlockTypes...) {
 		slog.Debug("processing result blocks", "blockType", blockType)
 		if tmpBlocks[blockType] == nil {
 			slog.Debug("blockType is nil, so skipped", "blockType", blockType)
