@@ -221,7 +221,21 @@ resource "aws_instance" "web" {
 			name:    "all types of blocks",
 			base:    []string{"base/all_blocks.tf"},
 			overlay: []string{"overlay/all_blocks.tf"},
-			expect: `locals {
+			expect: `import {
+  to = aws_instance.example2
+  id = "i-qwer5678"
+}
+removed {
+  from = aws_instance.example2
+  lifecycle {
+    destroy = true
+  }
+}
+moved {
+  from = aws_instance.old_name2
+  to   = aws_instance.new_name2
+}
+locals {
   a = 1
   b = 2
 }
@@ -257,6 +271,20 @@ terraform {
 variable "image_id" {
   default     = "ami-0c94855ba95c574c8"
   description = "foo"
+}
+moved {
+  from = aws_instance.old_name
+  to   = aws_instance.new_name
+}
+import {
+  to = aws_instance.example
+  id = "i-abcd1234"
+}
+removed {
+  from = aws_instance.example
+  lifecycle {
+    destroy = false
+  }
 }
 `,
 			wantErr: false,
