@@ -4,7 +4,7 @@ tfustomize {
 
 resources {
   paths = [
-    "main.tf",
+    "./",
   ]
 }
 

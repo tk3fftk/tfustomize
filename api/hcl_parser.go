@@ -24,7 +24,7 @@ var tfUniqueBlockTypes = []string{
 	"variable",
 }
 
-var tfNoLableBlockTypes = []string{
+var tfNoLabelBlockTypes = []string{
 	"moved",
 	"import",
 	"removed",
@@ -144,7 +144,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 			for name, attribute := range baseBlock.Body().Attributes() {
 				baseLocals[name] = attribute
 			}
-		} else if slices.Contains(tfNoLableBlockTypes, blockType) {
+		} else if slices.Contains(tfNoLabelBlockTypes, blockType) {
 			if tmpBlocks[blockType] == nil {
 				tmpBlocks[blockType] = map[string]*hclwrite.Block{}
 			}
@@ -177,8 +177,8 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 			for name, attribute := range overlayBlock.Body().Attributes() {
 				overlayLocals[name] = attribute
 			}
-		} else if slices.Contains(tfNoLableBlockTypes, blockType) {
-			// There is no lable to identify the block, so we just append it.
+		} else if slices.Contains(tfNoLabelBlockTypes, blockType) {
+			// There is no label to identify the block, so we just append it.
 			base.AppendBlock(overlayBlock)
 			base.AppendNewline()
 		} else {
@@ -205,7 +205,7 @@ func mergeBlocks(base *hclwrite.Body, overlay *hclwrite.Body) (*hclwrite.Body, e
 		base.AppendNewline()
 	}
 
-	for _, blockType := range append(tfUniqueBlockTypes, tfNoLableBlockTypes...) {
+	for _, blockType := range append(tfUniqueBlockTypes, tfNoLabelBlockTypes...) {
 		slog.Debug("processing result blocks", "blockType", blockType)
 		if tmpBlocks[blockType] == nil {
 			slog.Debug("blockType is nil, so skipped", "blockType", blockType)
