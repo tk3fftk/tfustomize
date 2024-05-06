@@ -1,6 +1,20 @@
 # example
 
-This document provides instructions for generating Terraform configuration files using a tool called `tfustomize`, and then applying those configurations to manage infrastructure in two environments: `staging` and `production`. These instructions use [docker provider](https://registry.terraform.io/providers/kreuzwerker/docker/latest) so `docker` is required in your environment.
+This document provides instructions for generating Terraform configuration files using `tfustomize`, and then applying those configurations to manage infrastructure in two environments: `staging` and `production`. These instructions use [docker provider](https://registry.terraform.io/providers/kreuzwerker/docker/latest) so `docker` is required in your environment.
+
+
+- The directory structure is following:
+
+```sh
+example
+├── README.md
+├── production
+│   ├── main.tf
+│   └── tfustomization.hcl
+└── staging
+    ├── main.tf
+    └── tfustomization.hcl
+```
 
 - Generate the Terraform configuration file using `tfustomize`.
 
