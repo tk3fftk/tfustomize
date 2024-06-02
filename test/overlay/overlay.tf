@@ -17,6 +17,11 @@ data "aws_ami" "ubuntu" {
     name   = "arch"
     values = ["arm64"]
   }
+  filter {
+    # tfustomize:block_merge:name
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
+  }
 }
 
 resource "aws_instance" "be" {
