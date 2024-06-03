@@ -184,12 +184,26 @@ func TestMergeFileBlocks(t *testing.T) {
 			overlay: []string{"overlay/data_with_block.tf"},
 			expect: `data "aws_ami" "ubuntu" {
   filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+  filter {
+    # tfustomize:merge_block:name
     name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
   }
+}
+`,
+			wantErr: false,
+		},
+		{
+			name:    "data source with merge block test",
+			base:    []string{"base/data_with_block.tf"},
+			overlay: []string{"overlay/data_with_block_merge.tf"},
+			expect: `data "aws_ami" "ubuntu" {
   filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
+    name   = "name_is_updated"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
   }
 }
 `,

@@ -8,7 +8,7 @@
 ## Motivation
 
 [Terraform Modules](https://developer.hashicorp.com/terraform/language/modules) is looks almost the only way to reuse resource configurations with Terraform. There is other option [`terragrunt`](https://terragrunt.gruntwork.io/), but it's looks expanding and wrapping the use of Terraform module.  
-Terraform modules are effective when they are widly spreaded as open sources, or when they are officially provided by kind of Platform Engineers for internal use in private environments. However, creating custom modules for one product seems like overkill.  
+Terraform modules are effective when they are widly spread as open sources, or when they are officially provided by kind of Platform Engineers for internal use in private environments. However, creating custom modules for one product seems like overkill.  
 It was quite labor-intensive to transition from a copy-paste style of management to using custom modules, so I created something like a Terraform version of kustomize as a proof of concept.  
 [Override Files](https://developer.hashicorp.com/terraform/language/files/override) feature is looks similar concept with `tfustomize` but overriding is not for reusing purpose.
 
@@ -74,12 +74,49 @@ patches {
 
 ### Merging Behavior and Limitation
 
-- A Top-level block has the same block type and labels in base and overlay will be merged. 
+- A Top-level block has the same block type and labels in base and overlay will be merged.
   - Except `moved`, `import`, `removed` block. These will be appended.
 - `locals` blocks will be merged.
 - Within a top-level block, an attribute argument within an overlay block will be replaced any argument of the same name in the base block.
-- Within a top-level block, any block will be appended. 
-  - [Limitation] can not be replaced (https://github.com/tk3fftk/tfustomize/issues/8) 
+- Within a top-level block, any block will be appended by default.
+  - To merge a block, use an annotation `# tfustimize:merge_block:<key>` both a base and an overlay like below.
+
+```hcl
+# base
+data "aws_ami" "ubuntu" {
+  filter {
+    # tfustomize:merge_block:name
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
+
+# overlay
+data "aws_ami" "ubuntu" {
+  filter {
+    name   = "arch"
+    values = ["arm64"]
+  }
+  filter {
+    # tfustomize:merge_block:name
+    name   = "name_is_updated"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
+  }
+}
+
+# output
+data "aws_ami" "ubuntu" {
+  filter {
+    name   = "arch"
+    values = ["arm64"]
+  }
+  filter {
+    name   = "name_is_updated"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
+  }
+}
+```
+
 - [Limitation] The output order is randomized inside block level order. (https://github.com/tk3fftk/tfustomize/issues/6)
 
 ### A sample Terraform directory structure with `tfustomize`

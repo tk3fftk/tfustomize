@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -29,6 +30,8 @@ var tfNoLabelBlockTypes = []string{
 	"import",
 	"removed",
 }
+
+var annotationBlockMergeRegexp = regexp.MustCompile(`tfustomize:merge_block:([\w]+)`)
 
 type HCLParser struct {
 }
@@ -247,15 +250,49 @@ func mergeBlock(baseBlock *hclwrite.Block, overlayBlock *hclwrite.Block) (*hclwr
 		setBodyAttribute(resultBlockBody, name, tmpAttributes[name])
 	}
 
-	// TODO: User can choose patch or append block
-	// append blocks that are defined in overlay
+	tmpBlocksForMerge := map[string]*hclwrite.Block{}
+	tmpBlocksForAppend := []*hclwrite.Block{}
+
 	for _, baseBlockBodyBlock := range baseBlockBody.Blocks() {
-		resultBlockBody.AppendNewline()
-		resultBlockBody.AppendBlock(baseBlockBodyBlock)
+		annotationForBlockMerge := annotationBlockMergeRegexp.Find(baseBlockBodyBlock.Body().BuildTokens(nil).Bytes())
+		if annotationForBlockMerge != nil {
+			mergeKey := string(annotationForBlockMerge)
+			slog.Debug("annotation is found in the base blocks", "annotation", mergeKey)
+
+			tmpBlocksForMerge[mergeKey] = baseBlockBodyBlock
+		} else {
+			tmpBlocksForAppend = append(tmpBlocksForAppend, baseBlockBodyBlock)
+		}
 	}
+
 	for _, overlayBlockBodyBlock := range overlayBlockBody.Blocks() {
+		annotationForBlockMerge := annotationBlockMergeRegexp.Find(overlayBlockBodyBlock.Body().BuildTokens(nil).Bytes())
+		if annotationForBlockMerge != nil {
+			mergeKey := string(annotationForBlockMerge)
+
+			if _, ok := tmpBlocksForMerge[mergeKey]; ok {
+				slog.Debug("annotation is found in the base and the overlay blocks", "annotation", mergeKey)
+
+				mergedBlock, err := mergeBlock(tmpBlocksForMerge[mergeKey], overlayBlockBodyBlock)
+				if err != nil {
+					return nil, err
+				}
+				tmpBlocksForMerge[mergeKey] = mergedBlock
+			} else {
+				slog.Debug("annotation is found but it is not in the base blocks", "annotation", mergeKey)
+			}
+		} else {
+			tmpBlocksForAppend = append(tmpBlocksForAppend, overlayBlockBodyBlock)
+		}
+	}
+
+	for _, block := range tmpBlocksForAppend {
 		resultBlockBody.AppendNewline()
-		resultBlockBody.AppendBlock(overlayBlockBodyBlock)
+		resultBlockBody.AppendBlock(block)
+	}
+	for _, block := range tmpBlocksForMerge {
+		resultBlockBody.AppendNewline()
+		resultBlockBody.AppendBlock(block)
 	}
 
 	return resultBlock, nil
