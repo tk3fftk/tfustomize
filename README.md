@@ -79,13 +79,13 @@ patches {
 - `locals` blocks will be merged.
 - Within a top-level block, an attribute argument within an overlay block will be replaced any argument of the same name in the base block.
 - Within a top-level block, any block will be appended by default.
-  - To merge a block, use an anotation `# tfustimize:block_merge:<key>` both a base and an overlay like below.
+  - To merge a block, use an anotation `# tfustimize:merge_block:<key>` both a base and an overlay like below.
 
 ```hcl
 # base
 data "aws_ami" "ubuntu" {
   filter {
-    # tfustomize:block_merge:name
+    # tfustomize:merge_block:name
     name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
   }
@@ -98,7 +98,7 @@ data "aws_ami" "ubuntu" {
     values = ["arm64"]
   }
   filter {
-    # tfustomize:block_merge:name
+    # tfustomize:merge_block:name
     name   = "name_is_updated"
     values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
   }

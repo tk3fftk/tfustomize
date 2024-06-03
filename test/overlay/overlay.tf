@@ -18,7 +18,7 @@ data "aws_ami" "ubuntu" {
     values = ["arm64"]
   }
   filter {
-    # tfustomize:block_merge:name
+    # tfustomize:merge_block:name
     name   = "name_is_updated"
     values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
   }

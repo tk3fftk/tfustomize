@@ -31,7 +31,7 @@ var tfNoLabelBlockTypes = []string{
 	"removed",
 }
 
-var annotationBlockMergeRegexp = regexp.MustCompile(`tfustomize:block_merge:([\w]+)`)
+var annotationBlockMergeRegexp = regexp.MustCompile(`tfustomize:merge_block:([\w]+)`)
 
 type HCLParser struct {
 }
