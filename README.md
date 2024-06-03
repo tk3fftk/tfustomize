@@ -74,12 +74,49 @@ patches {
 
 ### Merging Behavior and Limitation
 
-- A Top-level block has the same block type and labels in base and overlay will be merged. 
+- A Top-level block has the same block type and labels in base and overlay will be merged.
   - Except `moved`, `import`, `removed` block. These will be appended.
 - `locals` blocks will be merged.
 - Within a top-level block, an attribute argument within an overlay block will be replaced any argument of the same name in the base block.
-- Within a top-level block, any block will be appended. 
-  - [Limitation] can not be replaced (https://github.com/tk3fftk/tfustomize/issues/8) 
+- Within a top-level block, any block will be appended by default.
+  - To merge a block, use an anotation `# tfustimize:block_merge:<key>` both a base and an overlay like below.
+
+```hcl
+# base
+data "aws_ami" "ubuntu" {
+  filter {
+    # tfustomize:block_merge:name
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
+
+# overlay
+data "aws_ami" "ubuntu" {
+  filter {
+    name   = "arch"
+    values = ["arm64"]
+  }
+  filter {
+    # tfustomize:block_merge:name
+    name   = "name_is_updated"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
+  }
+}
+
+# output
+data "aws_ami" "ubuntu" {
+  filter {
+    name   = "arch"
+    values = ["arm64"]
+  }
+  filter {
+    name   = "name_is_updated"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-24.04-amd64-server-*"]
+  }
+}
+```
+
 - [Limitation] The output order is randomized inside block level order. (https://github.com/tk3fftk/tfustomize/issues/6)
 
 ### A sample Terraform directory structure with `tfustomize`
