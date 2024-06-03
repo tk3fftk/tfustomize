@@ -8,7 +8,7 @@
 ## Motivation
 
 [Terraform Modules](https://developer.hashicorp.com/terraform/language/modules) is looks almost the only way to reuse resource configurations with Terraform. There is other option [`terragrunt`](https://terragrunt.gruntwork.io/), but it's looks expanding and wrapping the use of Terraform module.  
-Terraform modules are effective when they are widly spreaded as open sources, or when they are officially provided by kind of Platform Engineers for internal use in private environments. However, creating custom modules for one product seems like overkill.  
+Terraform modules are effective when they are widly spread as open sources, or when they are officially provided by kind of Platform Engineers for internal use in private environments. However, creating custom modules for one product seems like overkill.  
 It was quite labor-intensive to transition from a copy-paste style of management to using custom modules, so I created something like a Terraform version of kustomize as a proof of concept.  
 [Override Files](https://developer.hashicorp.com/terraform/language/files/override) feature is looks similar concept with `tfustomize` but overriding is not for reusing purpose.
 
@@ -79,7 +79,7 @@ patches {
 - `locals` blocks will be merged.
 - Within a top-level block, an attribute argument within an overlay block will be replaced any argument of the same name in the base block.
 - Within a top-level block, any block will be appended by default.
-  - To merge a block, use an anotation `# tfustimize:merge_block:<key>` both a base and an overlay like below.
+  - To merge a block, use an annotation `# tfustimize:merge_block:<key>` both a base and an overlay like below.
 
 ```hcl
 # base
