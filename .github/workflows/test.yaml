@@ -18,7 +18,8 @@ jobs:
       - name: Build
         run: go build
       - name: goreleaser snapshot
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
-          version: v1.24.0
+          distribution: goreleaser
+          version: "~> v2"
           args: build --snapshot --clean
