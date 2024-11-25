@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	github.com/hashicorp/hcl/v2 v2.22.0
 	github.com/spf13/cobra v1.8.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 )
 
